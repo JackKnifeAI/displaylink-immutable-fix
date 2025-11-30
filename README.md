@@ -57,7 +57,7 @@ sudo dkms autoinstall
 ### Install the Fix
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/displaylink-immutable-fix.git
+git clone https://github.com/JackKnifeAI/displaylink-immutable-fix.git
 cd displaylink-immutable-fix
 sudo ./install.sh
 ```
