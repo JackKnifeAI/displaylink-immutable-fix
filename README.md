@@ -36,6 +36,7 @@ This fix:
 1. **Loads evdi directly from the DKMS build path** (`/var/lib/dkms/evdi/...`)
 2. **Auto-rebuilds on kernel updates** via `dkms autoinstall`
 3. **Integrates with systemd** so DisplayLink starts automatically on boot
+4. **Enables the service** with proper systemd configuration for persistence across reboots
 
 ## Installation
 
@@ -69,13 +70,20 @@ sudo ./install.sh
 sudo cp evdi-loader.sh /usr/local/bin/
 sudo chmod +x /usr/local/bin/evdi-loader.sh
 
-# Create systemd override
+# Create systemd overrides
 sudo mkdir -p /etc/systemd/system/displaylink-driver.service.d
 sudo cp displaylink-driver.service.d/override.conf \
     /etc/systemd/system/displaylink-driver.service.d/
 
-# Reload and restart
+# Enable autostart on boot
+sudo bash -c 'cat > /etc/systemd/system/displaylink-driver.service.d/enable.conf << EOF
+[Install]
+WantedBy=graphical.target
+EOF'
+
+# Reload, enable, and start
 sudo systemctl daemon-reload
+sudo systemctl enable displaylink-driver
 sudo systemctl restart displaylink-driver
 ```
 
@@ -97,6 +105,65 @@ The fix handles kernel updates automatically. On first boot after a kernel updat
 2. Runs `dkms autoinstall` to build it
 3. Loads the freshly built module
 4. DisplayLink starts normally
+
+## Troubleshooting
+
+### Service doesn't start on boot
+
+Check if the service is enabled:
+```bash
+systemctl is-enabled displaylink-driver
+```
+
+If it shows "disabled" or "static", enable it:
+```bash
+sudo systemctl enable displaylink-driver
+```
+
+Verify the enable.conf file exists:
+```bash
+cat /etc/systemd/system/displaylink-driver.service.d/enable.conf
+```
+
+Should contain:
+```
+[Install]
+WantedBy=graphical.target
+```
+
+### evdi module not loading
+
+Check DKMS status:
+```bash
+dkms status | grep evdi
+```
+
+If not built for current kernel, rebuild:
+```bash
+sudo dkms autoinstall
+```
+
+Manually test the loader:
+```bash
+sudo /usr/local/bin/evdi-loader.sh
+```
+
+### After reboot, still not working
+
+1. Check service status:
+```bash
+systemctl status displaylink-driver
+```
+
+2. Check module:
+```bash
+lsmod | grep evdi
+```
+
+3. Check logs:
+```bash
+journalctl -u displaylink-driver -b
+```
 
 ## How It Works
 

@@ -45,9 +45,20 @@ mkdir -p /etc/systemd/system/displaylink-driver.service.d
 install -m 644 "${SCRIPT_DIR}/displaylink-driver.service.d/override.conf" \
     /etc/systemd/system/displaylink-driver.service.d/override.conf
 
+# Add [Install] section to enable the service
+echo "Configuring service to start on boot..."
+cat > /etc/systemd/system/displaylink-driver.service.d/enable.conf << 'EOF'
+[Install]
+WantedBy=graphical.target
+EOF
+
 # Reload systemd
 echo "Reloading systemd..."
 systemctl daemon-reload
+
+# Enable the service for autostart
+echo "Enabling displaylink-driver service..."
+systemctl enable displaylink-driver
 
 # Build evdi for current kernel if needed
 KERNEL=$(uname -r)
