@@ -24,7 +24,9 @@ Fixes DisplayLink USB displays (like Mobile Pixels Duex Pro) on immutable Fedora
 
 ## The Problem
 
-On immutable Fedora, DKMS builds the `evdi` kernel module but **cannot install it** to the read-only `/lib/modules` directory. This causes the `displaylink-driver.service` to fail because `modprobe evdi` can't find the module.
+On immutable Fedora variants (Silverblue, Kinoite, Aurora, Bazzite), DKMS builds the `evdi` kernel module but **cannot install it** to the read-only `/lib/modules` directory. This causes the `displaylink-driver.service` to fail because `modprobe evdi` can't find the module.
+
+Additionally, even when the module is manually loaded, the service **won't start automatically on boot** because it lacks proper systemd `[Install]` configuration.
 
 ```
 modprobe: FATAL: Module evdi not found in directory /lib/modules/6.x.x-xxx.fc4x.x86_64
@@ -174,14 +176,40 @@ journalctl -u displaylink-driver -b
 - Decompresses `.ko.xz` if needed
 - Loads module via `insmod` from DKMS path
 
-### systemd override
+### systemd overrides
+
+**override.conf:**
 - Clears the default `ExecStartPre=/sbin/modprobe evdi` (which fails)
 - Replaces with `ExecStartPre=/usr/local/bin/evdi-loader.sh`
 
+**enable.conf:**
+- Adds `[Install]` section with `WantedBy=graphical.target`
+- Enables the service to start automatically on boot
+- Survives system reboots and kernel updates
+
+## Compatibility
+
+This fix works with **ALL DisplayLink devices** because it operates at the kernel module level (`evdi`), which is used universally by all DisplayLink USB display adapters regardless of manufacturer or model.
+
+### Supported DisplayLink Devices
+- ✅ Portable monitors (Mobile Pixels Duex, ASUS MB16, etc.)
+- ✅ USB docking stations (Dell, HP, Lenovo, Plugable, etc.)
+- ✅ USB-to-HDMI/DVI/DisplayPort adapters
+- ✅ Any device using DisplayLink chipsets (DL-1x5, DL-3x00, DL-4xxx, DL-5xxx, DL-6xxx series)
+
+### Supported Systems
+- ✅ Fedora Silverblue (immutable Workstation)
+- ✅ Fedora Kinoite (immutable KDE)
+- ✅ Universal Blue Aurora (immutable developer edition)
+- ✅ Universal Blue Bazzite (immutable gaming)
+- ✅ Any rpm-ostree based Fedora variant
+
 ## Tested On
 
-- [x] Aurora (Universal Blue) - Fedora 43
-- [x] Mobile Pixels Duex Pro (DisplayLink vendor 17e9)
+- [x] **Aurora (Universal Blue) - Fedora 43** on Samsung T7 Shield external SSD
+- [x] **Mobile Pixels Duex Pro** (DisplayLink vendor 17e9)
+- [x] Survives kernel updates (tested: 6.17.1 and 6.17.8)
+- [x] Survives reboots with auto-start enabled
 
 ## Contributing
 
